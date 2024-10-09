@@ -1,0 +1,89 @@
+Line matcher
+
+A simple grep-like utility
+
+Building
+
+    All paths are relative to the root directory of the sourcecode
+
+    I. Linux, cmake, gcc (tested in Ubuntu)
+
+        1. Building googletest library:
+
+                cd googletest
+                mkdir build
+                cd build
+                cmake -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release ..
+                cmake --build .
+
+        2. Building line-matcher and unit-tests:
+
+            Go back to the root directory of the sourcecode:
+
+                cd ../..
+
+            Then
+                mkdir build
+                cd build
+                cmake -DCMAKE_BUILD_TYPE=Release ..
+                cmake --build .
+
+            The executables are in build/bin
+
+
+    II. Windows, cmake, Visual Studio C++
+
+        1. Open Visual Studio's Native Tools Command Promt
+
+        2. Building googletest library:
+    
+                cd googletest
+                md build
+                cd build
+                cmake -DBUILD_SHARED_LIBS=ON ..
+                cmake --build . --config Release
+
+            The dll-s are in googletest\build\bin\Release.
+            They should be locatable through the PATH env. variable for running tests
+
+        3. Building line-matcher and unit-tests:
+
+            Go back to the root directory of the sourcecode:
+
+                cd ../..
+
+            Then
+                md build
+                cd build
+                cmake ..
+                cmake --build . --config Release
+
+            The executables are in build\bin\Release
+
+
+Usage
+
+    line-matcher [pattern] [directory path]
+
+
+Design
+The design is compatible with GoogleTest. The following interfaces are defined:
+IDirWalker, IFileReaderFactory, IOutput, and IFileReader. IDirWalker is an interface
+for directory traversal. IFileReaderFactory is an interface for creating objects that
+implement the IFileReader interface, which, in turn, is responsible for reading files
+line by line. IOutput is an interface for outputting results. The LineMatcher class,
+which implements the actual search algorithm, accepts pointers to the IDirWalker,
+IFileReaderFactory, and IOutput interfaces in its constructor. Through these interfaces,
+it gains access to the directory contents, reads files, and outputs the results.
+There are concrete implementations of these interfaces for real-world usage, while mocks
+are used in tests.
+The LineMatcher class operates by maintaining a queue of subtasks. Each thread attempts
+to pick up a subtask from this queue. If the queue contains subtasks, the thread
+processes one; if the queue is empty, the thread fetches the next file from the
+directory using the IDirWalker interface and creates a new subtask for that file.
+The file is read line by line using a file reader from the IFileReaderFactory, and
+each line is checked against the search pattern. If a match is found, the result is
+logged via the IOutput interface. The process continues until the directory is
+exhausted, ensuring that all files are processed efficiently by distributing work
+across multiple threads. When no more files are left, and all subtasks are completed,
+the threads finish
